@@ -19,7 +19,10 @@ if needkey:
         key=c.recv(1000).decode("UTF-8")
         f.write(key)
         print(key)
-        name=input("You need a name: ")
+        try:
+            name=input("You need a name: ")
+        except:
+            name="anoynomous"
         c.send(bytes(name,"UTF-8"))
     f="UTF-8"
 else:
@@ -59,4 +62,10 @@ chatcontrols.add_command(label="terminate server", command=stop)
 chatcontrols.add_command(label="Exit program", command=exit1)
 menu.add_cascade(label="Chat controls", menu=chatcontrols)
 t.config(menu=menu)
-t.mainloop()
+while True:
+    c.send(bytes("update","UTF-8"))
+    output.delete("0.0",END)
+    output.insert(END,c.recv(9000).decode("UTF-8"))
+    t.update_idletasks()
+    time.sleep(0.2)
+    t.update()
