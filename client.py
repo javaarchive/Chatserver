@@ -6,6 +6,7 @@ foregroundcolor="#73ff5e"
 import socket
 import os
 import time
+
 needkey=not os.path.exists("keyfile.key")
 clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 c=clientsocket
@@ -32,8 +33,9 @@ else:
 print("Loading connection gui")
 from tkinter import *
 from tkinter.ttk import *
+from tkinter.scrolledtext import *
 t=Tk()
-output=Text(t,bg=backgroundcolor,fg=foregroundcolor)
+output=ScrolledText(t,bg=backgroundcolor,fg=foregroundcolor)
 output.pack()
 chatbox=Entry(t,width=120)
 def chat(enter=0):
@@ -49,10 +51,22 @@ btn.pack()
 chatbox.pack()
 menu=Menu(t)
 chatcontrols=Menu(t)
+cache=""
+print("loading")
+c.send(bytes("update","UTF-8"))
+output.insert(END,c.recv(5094).decode())
+e=True
 def updatescreen(x=0):
-    c.send(bytes("update","UTF-8"))
-    output.delete("0.0",END)
-    output.insert(END,c.recv(9000).decode("UTF-8"))
+    global cache,e
+    if e:
+        e=not e
+        return 0
+    c.send(bytes("get","UTF-8"))
+    #print("Waiting")
+    out=c.recv(50000).decode()
+    if out!=cache:
+        output.insert(END,out)
+        cache=out
 def exit1(x=0):
     c.send(bytes("exit","UTF-8"))
 def stop(x=0):
@@ -62,10 +76,9 @@ chatcontrols.add_command(label="terminate server", command=stop)
 chatcontrols.add_command(label="Exit program", command=exit1)
 menu.add_cascade(label="Chat controls", menu=chatcontrols)
 t.config(menu=menu)
+print("Debug:Finish")
 while True:
-    c.send(bytes("update","UTF-8"))
-    output.delete("0.0",END)
-    output.insert(END,c.recv(9000).decode("UTF-8"))
+    updatescreen()
     t.update_idletasks()
-    time.sleep(0.2)
+    time.sleep(0.05)
     t.update()

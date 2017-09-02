@@ -3,11 +3,17 @@ import socket
 import threading
 import shelve as sh
 import signal
+import subprocess
+import smtplib
+version="1.2"
+with open("chat.save","r") as r:
+   chat="Chat server python version\t"+version+"\n"+r.read()
 sfile=sh.open("Ids.save")
 s=socket.socket()
 s.bind((socket.gethostname(), 8000))#"" for local use, use socket.gethostname() for internat acess
 s.listen(100)
-version="1.2"
+emaillist={"your name":("your gmail",'your password')}#Access for kless secure apps must be enabled
+
 class mod():
     def __init__(self,modname):
         self.name=modname
@@ -26,10 +32,57 @@ class Filter:
 class filter1(Filter):
     def Filter(self,msg):
         return msg.replace("~","#")
-filters=[filter1()]#add   filters here
+class cmdloader(Filter):
+    def Filter(self,msg):
+        global chat
+        detect="cmd"
+        if msg.startswith(detect):
+            new=subprocess.check_output(msg[len(detect):].split(),shell=True).decode()
+            chat=chat+"(Server) command result "+msg[len(detect):]+" :\t"+new+"\n"
+        return msg
+class emailloader(Filter):
+    def Filter(self,msg):
+        global chat
+        detect="mail"
+        if msg.startswith(detect):
+            msg=msg.split()
+            detail=emaillist[msg[1]]
+            gmail_user = detail[0] 
+            gmail_password = detail[1]
+
+            sent_from = gmail_user  
+            to = [msg[2]]  
+            subject = 'Automated MSG from chat server'  
+            body = "Message sent from chat server: \n"+" ".join(msg[2:]).replace("newline"," \n")+"\n You are reciving this email because someone in the server invoked a command to send"
+            
+            email_text = """\  
+            From: %s  
+            To: %s  
+            Subject: %s
+            
+            %s
+            """ % (sent_from, ", ".join(to), subject, body)
+            print(to,subject,body,sent_from,gmail_user)
+           
+              
+            server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            server.ehlo()
+            server.login(gmail_user, gmail_password)
+            server.sendmail(sent_from, to, email_text)
+            server.close()
+
+            print('Email sent!')
+            
+            return "Email sent correctly(server filter altered to not show email command security) if chat says something went wrong there was a error acessesing your acount make sure you enable allow less secure ap ps to access your email"
+        return msg        
+
+
+                        
+       
+                    
+filters=[filter1(),cmdloader(),emailloader()]#add   filters here
 stop=False
-with open("chat.save","r") as r:
-   chat="Chat server python version\t"+version+"\n"+r.read()
+
 class ExitCommand(Exception):
     pass
 
@@ -45,12 +98,14 @@ def thread_job():
     os.kill(os.getpid(), signal.SIGINT)
 signal.signal(signal.SIGINT, signal_handler)
 threading.Thread(target=thread_job).start()
+import random
+new=str(random.randint(0,560978))
 class serve (threading.Thread):
    def __init__(self, client):
       threading.Thread.__init__(self)
       self.c=client
    def run(self):
-        global stop,chat
+        global stop,chat,new
         f="UTF-8"
         conn=self.c
         print("new client")
@@ -71,8 +126,15 @@ class serve (threading.Thread):
                #conn.sendall(bytes("still in progress",f))
                if data.decode("UTF-8")=="Shutdown":
                   stop=True
-               if data.decode("UTF-8")=="update":
+               if data.decode("UTF-8")=="load":
+                  print("Client load")
                   conn.send(bytes(chat,"UTF-8"))
+               if data.decode("UTF-8")=="update":
+                  print("Client update")
+                  conn.send(bytes(chat,"UTF-8"))
+               if data.decode("UTF-8")=="get":
+                  conn.send(bytes(new,"UTF-8"))
+                  #print("Get")
                if data.decode("UTF-8")=="chatmessage":
                   sup=conn.recv(50)
                   print(type(sup))
@@ -93,9 +155,13 @@ class serve (threading.Thread):
                           print("Non filter object warning")
                   
                   print("Incoming message"+str(dict1))
-                  chat=chat+"["+dict1["name"]+"]"+msg+"\n"
+                  msg1="["+dict1["name"]+"]"+msg+"\n"
+                  print("Message1")
+                  chat=chat+msg1
+                  new=msg1
                   with open("chat.save","w") as q:
                       q.write(chat)
+                  
                if data.decode("UTF-8")=="exit":
                   
                   break
