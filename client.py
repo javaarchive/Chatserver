@@ -36,7 +36,7 @@ from tkinter.ttk import *
 from tkinter.scrolledtext import *
 t=Tk()
 output=ScrolledText(t,bg=backgroundcolor,fg=foregroundcolor)
-output.pack()
+output.pack(fill=BOTH,expand=YES)
 chatbox=Entry(t,width=120)
 def chat(enter=0):
     global key
@@ -46,6 +46,7 @@ def chat(enter=0):
     time.sleep(1)
     c.send(bytes(chatbox.get(),"UTF-8"))
     chatbox.delete("0",END)
+    updatescreen()
 btn=Button(t,text="chat",command=chat)
 btn.pack()
 chatbox.pack()
@@ -56,6 +57,7 @@ print("loading")
 c.send(bytes("update","UTF-8"))
 output.insert(END,c.recv(5094).decode())
 e=True
+chatbox.bind("<Key-Return>",chat)
 def updatescreen(x=0):
     global cache,e
     if e:
